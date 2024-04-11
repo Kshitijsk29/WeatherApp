@@ -10,14 +10,12 @@ import android.location.Location
 import android.location.LocationManager
 
 import android.net.Uri
-import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -29,6 +27,13 @@ import com.karumi.dexter.MultiplePermissionsReport
 import com.karumi.dexter.PermissionToken
 import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener
+import com.nextin.wheatherapp.models.WeatherResponse
+import com.nextin.wheatherapp.networks.WeatherServices
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 
 class MainActivity : AppCompatActivity() {
@@ -77,9 +82,7 @@ class MainActivity : AppCompatActivity() {
                 }).onSameThread()
                 .check()
         }
-
     }
-
     private fun isLocationEnable() : Boolean
     {
         val locationManager : LocationManager = getSystemService(Context.LOCATION_SERVICE)
@@ -132,21 +135,55 @@ class MainActivity : AppCompatActivity() {
             val longitude = mLastLocation.longitude
             Log.i("Current Longitude", "$longitude")
 
-            // TODO (STEP 7: Call the api calling function here.)
-            getLocationWeatherDetails()
+
+            getLocationWeatherDetails(latitude , longitude)
         }
     }
 
-    private fun getLocationWeatherDetails(){
-
+    private fun getLocationWeatherDetails(latitude :Double , longitude :Double ){
 
         if (Constants.isNetworkAvailable(this@MainActivity)) {
+            val retrofit : Retrofit = Retrofit.Builder()
+                .baseUrl(Constants.BASE_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
 
-            Toast.makeText(
-                this@MainActivity,
-                "You have connected to the internet. Now you can make an api call.",
-                Toast.LENGTH_SHORT
-            ).show()
+            val service :WeatherServices = retrofit
+                .create(WeatherServices::class.java)
+
+            val listCall : Call<WeatherResponse> = service.getWeather(
+                latitude , longitude, Constants.METRIC_UNIT, Constants.APP_ID
+            )
+
+            listCall.enqueue(object :Callback<WeatherResponse>{
+                override fun onResponse(
+                    call: Call<WeatherResponse>,
+                    response: Response<WeatherResponse>
+                ) {
+                    if(response.isSuccessful){
+                        val weatherList : WeatherResponse? = response.body()
+                        Log.i("Response Result ", "$weatherList")
+                    }
+                    else{
+                        val rc = response.code()
+                        when(rc){
+                            400 ->{
+                                Log.e("Error 400 ","Bad Connection")
+                            }
+                            404 ->{
+                                Log.e("Error 404 ","Not Found")
+                            }else ->{
+                                Log.e("Error", "Generic Error")
+                            }
+                        }
+                    }
+                }
+
+                override fun onFailure(call: Call<WeatherResponse>, t: Throwable?) {
+                    Log.e("Error You have to Find it Exactly ", t!!.message.toString())
+                }
+            })
+
         } else {
             Toast.makeText(
                 this@MainActivity,
@@ -154,6 +191,6 @@ class MainActivity : AppCompatActivity() {
                 Toast.LENGTH_SHORT
             ).show()
         }
-        // END
+
     }
 }
