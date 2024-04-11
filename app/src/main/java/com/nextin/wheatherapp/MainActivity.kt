@@ -160,12 +160,15 @@ class MainActivity : AppCompatActivity() {
                     call: Call<WeatherResponse>,
                     response: Response<WeatherResponse>
                 ) {
-                    if(response.isSuccessful){
-                        val weatherList : WeatherResponse? = response.body()
+                    if(response.isSuccessful)
+                    {
+                        val weatherList  = response.body()
                         Log.i("Response Result ", "$weatherList")
+
                     }
                     else{
                         val rc = response.code()
+
                         when(rc){
                             400 ->{
                                 Log.e("Error 400 ","Bad Connection")
@@ -179,11 +182,10 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                override fun onFailure(call: Call<WeatherResponse>, t: Throwable?) {
-                    Log.e("Error You have to Find it Exactly ", t!!.message.toString())
+                override fun onFailure(call: Call<WeatherResponse>, t: Throwable) {
+                    Log.e("Error You have to Find it Exactly ", t.message.toString())
                 }
             })
-
         } else {
             Toast.makeText(
                 this@MainActivity,
