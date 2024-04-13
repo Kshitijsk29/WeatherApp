@@ -3,6 +3,7 @@ package com.nextin.wheatherapp
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.app.Dialog
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -34,25 +35,34 @@ import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.create
 
 
 class MainActivity : AppCompatActivity() {
     private lateinit var mFusedLocationClient: FusedLocationProviderClient
+
+    // TODO (STEP 4: Create a global variable for ProgressDialog.)
+    // A global variable for the Progress Dialog
+    private var mProgressDialog: Dialog? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Initialize the Fused location variable
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
+        if (!isLocationEnabled()) {
+            Toast.makeText(
+                this,
+                "Your location provider is turned off. Please turn it on.",
+                Toast.LENGTH_SHORT
+            ).show()
 
-        if (!isLocationEnable()){
-            Toast.makeText(this, "Your Location provider is turned OFF ," +
-                    " please turned it ON",Toast.LENGTH_SHORT).show()
-
-            val intent =Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+            // This will redirect you to settings from where you need to turn on the location provider.
+            val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
             startActivity(intent)
-        }
-        else {
+        } else {
             Dexter.withActivity(this)
                 .withPermissions(
                     Manifest.permission.ACCESS_FINE_LOCATION,
@@ -83,14 +93,23 @@ class MainActivity : AppCompatActivity() {
                 .check()
         }
     }
-    private fun isLocationEnable() : Boolean
-    {
-        val locationManager : LocationManager = getSystemService(Context.LOCATION_SERVICE)
-                as LocationManager
 
-        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
-                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    /**
+     * A function which is used to verify that the location or GPS is enable or not of the user's device.
+     */
+    private fun isLocationEnabled(): Boolean {
+
+        // This provides access to the system location services.
+        val locationManager: LocationManager =
+            getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(
+            LocationManager.NETWORK_PROVIDER
+        )
     }
+
+    /**
+     * A function used to show the alert dialog when the permissions are denied and need to allow it from settings app info.
+     */
     private fun showRationalDialogForPermissions() {
         AlertDialog.Builder(this)
             .setMessage("It Looks like you have turned off permissions required for this feature. It can be enabled under Application Settings")
@@ -112,7 +131,9 @@ class MainActivity : AppCompatActivity() {
             }.show()
     }
 
-
+    /**
+     * A function to request the current location. Using the fused location provider client.
+     */
     @SuppressLint("MissingPermission")
     private fun requestLocationData() {
 
@@ -126,6 +147,9 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    /**
+     * A location callback object of fused location provider client where we will get the current location details.
+     */
     private val mLocationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
             val mLastLocation: Location = locationResult.lastLocation!!
@@ -135,55 +159,94 @@ class MainActivity : AppCompatActivity() {
             val longitude = mLastLocation.longitude
             Log.i("Current Longitude", "$longitude")
 
-
-            getLocationWeatherDetails(latitude , longitude)
+            getLocationWeatherDetails(latitude, longitude)
         }
     }
 
-    private fun getLocationWeatherDetails(latitude :Double , longitude :Double ){
+    /**
+     * Function is used to get the weather details of the current location based on the latitude longitude
+     */
+    private fun getLocationWeatherDetails(latitude: Double, longitude: Double) {
 
         if (Constants.isNetworkAvailable(this@MainActivity)) {
-            val retrofit : Retrofit = Retrofit.Builder()
+
+            /**
+             * Add the built-in converter factory first. This prevents overriding its
+             * behavior but also ensures correct behavior when using converters that consume all types.
+             */
+            val retrofit: Retrofit = Retrofit.Builder()
+                // API base URL.
                 .baseUrl(Constants.BASE_URL)
+                /** Add converter factory for serialization and deserialization of objects. */
+                /**
+                 * Create an instance using a default {@link Gson} instance for conversion. Encoding to JSON and
+                 * decoding from JSON (when no charset is specified by a header) will use UTF-8.
+                 */
                 .addConverterFactory(GsonConverterFactory.create())
+                /** Create the Retrofit instances. */
                 .build()
 
-            val service :WeatherServices = retrofit
-                .create(WeatherServices::class.java)
+            /**
+             * Here we map the service interface in which we declares the end point and the API type
+             *i.e GET, POST and so on along with the request parameter which are required.
+             */
+            val service: WeatherServices =
+                retrofit.create<WeatherServices>(WeatherServices::class.java)
 
-            val listCall : Call<WeatherResponse> = service.getWeather(
-                latitude , longitude, Constants.METRIC_UNIT, Constants.APP_ID
+            /** An invocation of a Retrofit method that sends a request to a web-server and returns a response.
+             * Here we pass the required param in the service
+             */
+            val listCall: Call<WeatherResponse> = service.getWeather(
+                latitude, longitude, Constants.APP_ID
             )
 
-            listCall.enqueue(object :Callback<WeatherResponse>{
+            // TODO (STEP 6: Show the progress dialog)
+            // START
+            showCustomProgressDialog() // Used to show the progress dialog
+            // END
+
+            // Callback methods are executed using the Retrofit callback executor.
+            listCall.enqueue(object : Callback<WeatherResponse> {
+                @SuppressLint("SetTextI18n")
                 override fun onResponse(
                     call: Call<WeatherResponse>,
                     response: Response<WeatherResponse>
                 ) {
-                    if(response.isSuccessful)
-                    {
-                        val weatherList  = response.body()
-                        Log.i("Response Result ", "$weatherList")
 
-                    }
-                    else{
-                        val rc = response.code()
+                    // Check weather the response is success or not.
+                    if (response.isSuccessful) {
 
-                        when(rc){
-                            400 ->{
-                                Log.e("Error 400 ","Bad Connection")
+                        // TODO (STEP 7: Hide the progress dialog)
+                        // START
+                        hideProgressDialog() // Hides the progress dialog
+                        // END
+
+                        /** The de-serialized response body of a successful response. */
+                        val weatherList: WeatherResponse = response.body()!!
+                        Log.i("Response Result", "$weatherList")
+                    } else {
+                        // If the response is not "success" then we check the response code.
+                        val sc = response.code()
+                        when (sc) {
+                            400 -> {
+                                Log.e("Error 400", "Bad Request")
                             }
-                            404 ->{
-                                Log.e("Error 404 ","Not Found")
-                            }else ->{
-                                Log.e("Error", "Generic Error")
+                            404 -> {
+                                Log.e("Error 404", "Not Found")
+                            }
+                            else -> {
+                                Log.e("Error my", "Generic Error")
                             }
                         }
                     }
                 }
 
                 override fun onFailure(call: Call<WeatherResponse>, t: Throwable) {
-                    Log.e("Error You have to Find it Exactly ", t.message.toString())
+                    // TODO (STEP 8: Hide the progress dialog)
+                    // START
+                    hideProgressDialog() // Hides the progress dialog
+                    // END
+                    Log.e("Errorrrrr", t.message.toString())
                 }
             })
         } else {
@@ -193,6 +256,31 @@ class MainActivity : AppCompatActivity() {
                 Toast.LENGTH_SHORT
             ).show()
         }
-
     }
+
+    // TODO (STEP 5: Create a functions for SHOW and HIDE progress dialog.)
+    // START
+    /**
+     * Method is used to show the Custom Progress Dialog.
+     */
+    private fun showCustomProgressDialog() {
+        mProgressDialog = Dialog(this)
+
+        /*Set the screen content from a layout resource.
+        The resource will be inflated, adding all top-level views to the screen.*/
+        mProgressDialog!!.setContentView(R.layout.dialog_custom_progress)
+
+        //Start the dialog and display it on screen.
+        mProgressDialog!!.show()
+    }
+
+    /**
+     * This function is used to dismiss the progress dialog if it is visible to user.
+     */
+    private fun hideProgressDialog() {
+        if (mProgressDialog != null) {
+            mProgressDialog!!.dismiss()
+        }
+    }
+    // END
 }
