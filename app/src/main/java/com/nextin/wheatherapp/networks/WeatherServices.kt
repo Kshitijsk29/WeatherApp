@@ -6,10 +6,11 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 
 interface WeatherServices {
-    @GET("/2.5/weather")
+    @GET("weather")
     fun getWeather(
         @Query("lat")lat :Double,
         @Query("lon")lon :Double,
-        @Query("aapid")aapid :String
+        @Query("appid")appid :String,
+        @Query("units")units :String
     ): Call<WeatherResponse>
 }

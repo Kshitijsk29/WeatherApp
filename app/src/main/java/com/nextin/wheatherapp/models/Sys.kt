@@ -1,11 +1,9 @@
 package com.nextin.wheatherapp.models
 
-import java.io.Serializable
-
-data class Sys (
-    val type :Int,
-    val id :Int,
-    val country :String,
-    val sunrise : Int,
-    val sunset :Int
-) : Serializable
+data class Sys(
+    val country: String,
+    val id: Int,
+    val sunrise: Int,
+    val sunset: Int,
+    val type: Int
+)

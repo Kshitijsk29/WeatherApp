@@ -1,8 +1,6 @@
 package com.nextin.wheatherapp.models
 
-import java.io.Serializable
-
-data class Coord (
-    val lon : Double,
-    val lat : Double
-): Serializable
+data class Coord(
+    val lat: Double,
+    val lon: Double
+)
