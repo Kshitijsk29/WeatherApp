@@ -170,7 +170,6 @@ class MainActivity : AppCompatActivity() {
             )
 
             showCustomProgressDialog()
-
             listCall.enqueue(object : Callback<WeatherResponse> {
                 @SuppressLint("SetTextI18n")
                 override fun onResponse(
@@ -203,13 +202,13 @@ class MainActivity : AppCompatActivity() {
 
                 override fun onFailure(call: Call<WeatherResponse>, t: Throwable) {
                     hideProgressDialog()
-                    Log.e("Errorrrrr", t.message.toString())
+                    Log.e("it's Error", t.message.toString())
                 }
             })
         } else {
             Toast.makeText(
                 this@MainActivity,
-                "No internet connection available.",
+                "Please Connect to Internet.",
                 Toast.LENGTH_SHORT
             ).show()
         }
