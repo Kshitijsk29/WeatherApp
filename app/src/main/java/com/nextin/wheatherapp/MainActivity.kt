@@ -163,7 +163,7 @@ class MainActivity : AppCompatActivity() {
                 .build()
 
             val service: WeatherServices =
-                retrofit.create<WeatherServices>(WeatherServices::class.java)
+                retrofit.create(WeatherServices::class.java)
 
             val listCall: Call<WeatherResponse> = service.getWeather(
                 latitude, longitude, Constants.APP_ID,Constants.METRIC_UNIT
@@ -185,8 +185,7 @@ class MainActivity : AppCompatActivity() {
                         setUpInterface(weatherList)
                         Log.i("TAG Response", "$weatherList")
                     } else {
-                        val sc = response.code()
-                        when (sc) {
+                        when (response.code()) {
                             400 -> {
                                 Log.e("Error 400", "Bad Request")
                             }
@@ -225,10 +224,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun setUpInterface(weatherList :WeatherResponse){
 
         for(i in weatherList.weather.indices){
-            Log.i("Namewe" , weatherList.weather[i].main)
+            Log.i("Name" , weatherList.weather[i].main)
 
             binding.tvMain.text = weatherList.weather[i].main
             binding.tvMainDescription.text = weatherList.weather[i].description
@@ -242,7 +242,8 @@ class MainActivity : AppCompatActivity() {
             binding.tvSunsetTime.text = unixTime(weatherList.sys.sunrise.toLong())
             binding.tvSunsetTime.text = unixTime(weatherList.sys.sunset.toLong())
 
-            when(weatherList.weather[i].icon){
+            when(weatherList.weather[i].icon)
+            {
                 "01d" -> binding.ivMain.setImageResource(R.drawable.sunny)
                 "02d" -> binding.ivMain.setImageResource(R.drawable.cloud)
                 "03d" -> binding.ivMain.setImageResource(R.drawable.cloud)
@@ -267,7 +268,7 @@ class MainActivity : AppCompatActivity() {
         sdf.timeZone = TimeZone.getDefault()
         return sdf.format(date)
     }
-    private fun getUnit(value: String): String? {
+    private fun getUnit(value: String): String {
         Log.i("unitttttt", value)
         var value = "°C"
         if ("US" == value || "LR" == value || "MM" == value) {
